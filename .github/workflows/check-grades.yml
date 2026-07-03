@@ -47,3 +47,5 @@ jobs:
         with:
           commit_message: 'chore: update grade state'
           file_pattern: 'state/grades.enc state/last_checked.txt'
+
+# trigger workflow registration
