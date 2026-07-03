@@ -23,11 +23,11 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
 
       - run: npm ci --omit=dev || npm install --omit=dev
 
@@ -43,7 +43,7 @@ jobs:
         run: node src/index.js
 
       - name: Commit state
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: 'chore: update grade state'
           file_pattern: 'state/grades.enc state/last_checked.txt'
