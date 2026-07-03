@@ -2,6 +2,8 @@
 const GREEN = 3066993;
 const GOLD = 15844367;
 const PURPLE = 10181046;
+const ORANGE = 15105570; // phiếu thu học phí
+const VND = new Intl.NumberFormat('vi-VN');
 const MAX_FIELDS = 25;
 const MAX_EMBEDS = 10;
 
@@ -24,7 +26,20 @@ export function buildEmbeds(subjects, opts = {}) {
   const prefix = opts.testMode ? '🧪 ' : '';
   const embeds = [];
   for (const s of subjects) {
-    if (s.isRenLuyen) {
+    const isPhieuThu = s.isPhieuThu || (s.key && s.key.startsWith('phieuthu:'));
+    if (isPhieuThu) {
+      let desc = '';
+      const fields = [];
+      for (const c of s.changes) {
+        if (c.label === 'Hóa đơn') {
+          if (c.new) desc = `🧾 Hóa đơn: [Xem PDF](${c.new})`;
+          continue;
+        }
+        const val = c.label === 'Số tiền' ? `${VND.format(Number(c.new))} ₫` : String(c.new);
+        fields.push({ name: c.label, value: `**${val}**`, inline: true });
+      }
+      embeds.push(makeEmbed(`${prefix}💸 Phiếu thu học phí mới`, desc, ORANGE, fields));
+    } else if (s.isRenLuyen) {
       const fields = s.changes.map((c) => ({ name: c.label, value: fieldValue(c), inline: true }));
       embeds.push(makeEmbed(`${prefix}📋 Điểm rèn luyện — ${s.tenDot}`, '', PURPLE, fields));
     } else if (s.isFinalized) {

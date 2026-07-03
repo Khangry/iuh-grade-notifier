@@ -57,4 +57,8 @@ export async function danhGiaRenLuyen(ctx, idSV, f = fetch) {
   throw lastErr;
 }
 
-export const realApi = { ketQuaHocTap, ketQuaHocTapChiTiet, danhGiaRenLuyen };
+// Phiếu thu học phí. LƯU Ý: field maSinhVien (= ma_map trong token), KHÔNG phải idSinhVien.
+export const phieuThuTongHop = (ctx, maSV, f) =>
+  apiPost(ctx, 'api/v1/SinhVien/PhieuThuTongHop', { maSinhVien: maSV }, f);
+
+export const realApi = { ketQuaHocTap, ketQuaHocTapChiTiet, danhGiaRenLuyen, phieuThuTongHop };

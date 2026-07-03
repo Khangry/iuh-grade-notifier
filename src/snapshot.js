@@ -60,6 +60,24 @@ export function parseRenLuyen(result) {
   return Object.values(byId);
 }
 
+// Phiếu thu bất biến → id mới xuất hiện = phiếu mới, khung diff tự bắt.
+function phieuThuEntity(p) {
+  return {
+    tenMonHoc: 'Phiếu thu học phí',
+    tenDot: p.ngayThu || '',
+    maMonHoc: p.soPhieu || '',
+    isPhieuThu: true,
+    cells: {
+      'Số tiền': p.tongTien != null && p.tongTien !== '' ? String(p.tongTien) : '',
+      'Ngày thu': p.ngayThu || '',
+      'Mã hóa đơn': p.maHoaDon || '',
+      'Loại thu': p.idLoaiThu != null ? String(p.idLoaiThu) : '',
+      'Đơn vị thu': p.donViThu || '',
+      'Hóa đơn': p.urlInvoice || '',
+    },
+  };
+}
+
 function renLuyenEntity(d) {
   return {
     tenMonHoc: 'Điểm rèn luyện',
@@ -80,7 +98,7 @@ export async function buildSnapshot(cfg, deps = {}) {
   const login = deps.login || realLogin;
   const api = deps.api || realApi;
 
-  const { access_token, sub } = await login(cfg);
+  const { access_token, sub, maMap } = await login(cfg);
   const idSV = Number(sub);
   const ctx = deps.ctx || makeCtx(cfg, access_token);
   ctx.token = access_token;
@@ -123,6 +141,19 @@ export async function buildSnapshot(cfg, deps = {}) {
     }
   } catch (e) {
     console.error(`Bỏ qua điểm rèn luyện: ${e.message}`);
+  }
+
+  // Phiếu thu học phí — dùng maMap (ma_map trong token), không phải idSV.
+  if (maMap != null && api.phieuThuTongHop) {
+    try {
+      const pt = await api.phieuThuTongHop(ctx, maMap);
+      const list = Array.isArray(pt) ? pt : (Array.isArray(pt?.result) ? pt.result : []);
+      for (const p of list) {
+        if (p && p.id != null) snapshot[`phieuthu:${p.id}`] = phieuThuEntity(p);
+      }
+    } catch (e) {
+      console.error(`Bỏ qua phiếu thu: ${e.message}`);
+    }
   }
 
   return { snapshot, idSV };

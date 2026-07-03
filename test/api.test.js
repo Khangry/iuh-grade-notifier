@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apiPost, ketQuaHocTapChiTiet } from '../src/api.js';
+import { apiPost, ketQuaHocTapChiTiet, phieuThuTongHop } from '../src/api.js';
 
 const cfg = { urlUni: 'https://sv.test/App/' };
 
@@ -42,4 +42,11 @@ test('ketQuaHocTapChiTiet gửi idLopHocPhan', async () => {
   const f = async (url, opts) => { body = JSON.parse(opts.body); return { ok: true, status: 200, json: async () => ({ result: {}, isOk: true }) }; };
   await ketQuaHocTapChiTiet({ token: 't', cfg }, 5, 601645, f);
   assert.deepEqual(body, { idSinhVien: 5, idLopHocPhan: 601645 });
+});
+
+test('phieuThuTongHop gửi maSinhVien (không phải idSinhVien)', async () => {
+  let body;
+  const f = async (u, o) => { body = JSON.parse(o.body); return { ok: true, status: 200, json: async () => ({ result: [], isOk: true }) }; };
+  await phieuThuTongHop({ token: 't', cfg }, 'MASV123', f);
+  assert.deepEqual(body, { maSinhVien: 'MASV123' });
 });

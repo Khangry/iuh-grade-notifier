@@ -1,11 +1,14 @@
 // Đăng nhập OAuth2 password grant (OpenIddict). Decode JWT lấy sub = idSinhVien.
 import { DEFAULTS } from './config.js';
 
-export function decodeJwtSub(accessToken) {
+export function decodeJwt(accessToken) {
   const parts = String(accessToken).split('.');
   if (parts.length < 2) throw new Error('access_token không phải JWT');
-  const json = Buffer.from(parts[1], 'base64url').toString('utf8');
-  const payload = JSON.parse(json);
+  return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+}
+
+export function decodeJwtSub(accessToken) {
+  const payload = decodeJwt(accessToken);
   if (!payload.sub) throw new Error('JWT thiếu sub');
   return payload.sub;
 }
@@ -35,6 +38,8 @@ export async function login(cfg, fetchImpl = fetch) {
     throw new Error(`Đăng nhập thất bại: HTTP ${res.status}${code ? ' ' + code : ''}`);
   }
   const data = await res.json();
-  const sub = decodeJwtSub(data.access_token);
-  return { access_token: data.access_token, sub };
+  const payload = decodeJwt(data.access_token);
+  if (!payload.sub) throw new Error('JWT thiếu sub');
+  // ma_map = mã sinh viên (chuỗi) dùng cho PhieuThuTongHop — KHÁC sub/idSinhVien.
+  return { access_token: data.access_token, sub: payload.sub, maMap: payload.ma_map };
 }
