@@ -1,0 +1,49 @@
+name: check-grades
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 08:00 giờ VN (UTC+7). GitHub cron dùng UTC; có thể trễ lúc tải cao.
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'normal | test'
+        required: false
+        default: 'normal'
+        type: choice
+        options: [normal, test]
+
+permissions:
+  contents: write   # commit state ngược bằng GITHUB_TOKEN
+
+concurrency:
+  group: check-grades
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci --omit=dev || npm install --omit=dev
+
+      - name: Run grade checker
+        env:
+          ONEUNI_USERNAME: ${{ secrets.ONEUNI_USERNAME }}
+          ONEUNI_PASSWORD: ${{ secrets.ONEUNI_PASSWORD }}
+          ONEUNI_CLIENT_SECRET: ${{ secrets.ONEUNI_CLIENT_SECRET }}
+          STATE_ENCRYPTION_KEY: ${{ secrets.STATE_ENCRYPTION_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ALERT_WEBHOOK: ${{ secrets.DISCORD_ALERT_WEBHOOK }}
+          TEST_MODE: ${{ github.event.inputs.mode == 'test' && '1' || '' }}
+        run: node src/index.js
+
+      - name: Commit state
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update grade state'
+          file_pattern: 'state/grades.enc state/last_checked.txt'

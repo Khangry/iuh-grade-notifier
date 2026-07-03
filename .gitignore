@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+.secrets.local
+setup-secrets.sh
+*.local
+npm-debug.log*
+PROMPT_grade_notifier.md
+.claude/
