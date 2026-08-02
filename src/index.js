@@ -4,8 +4,10 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import { buildConfig, assertConfig } from './config.js';
-import { buildSnapshot, labelFromKey } from './snapshot.js';
+import { buildSnapshot } from './snapshot.js';
 import { diff } from './diff.js';
+import { endpoints } from './endpoints/index.js';
+import { labelFromKey } from './snapshot-utils.js';
 import { loadState, saveState, writeLastChecked } from './state.js';
 import { sendGradeUpdate, sendAlert } from './discord.js';
 
@@ -47,14 +49,9 @@ async function runTest(cfg) {
   const totalCells = entries.reduce(
     (n, [, v]) => n + Object.values(v.cells).filter((x) => x !== '').length, 0);
 
-  // Kỳ gần nhất = idDot lớn nhất có điểm (không tính phiếu thu — không có idDot).
-  const grades = entries.filter(([k]) => !k.startsWith('phieuthu:'));
-  const phieuThu = entries.filter(([k]) => k.startsWith('phieuthu:'));
-  const maxDot = grades.reduce((m, [, v]) => Math.max(m, v.idDot || 0), 0);
-  let picked = grades.filter(([, v]) => (v.idDot || 0) === maxDot);
-  if (!picked.length) picked = grades;
-  // vài môn kỳ mới nhất + vài phiếu thu có sẵn để kiểm cả 2 code path.
-  picked = picked.slice(0, cfg.testSubjectCount).concat(phieuThu.slice(0, cfg.testSubjectCount));
+  // Mỗi endpoint tự chọn dữ liệu đại diện cho test mode.
+  const picked = endpoints.flatMap((endpoint) => endpoint.selectForTest(
+    entries.filter(([, entity]) => entity.endpoint === endpoint.id), cfg.testSubjectCount));
 
   const subjects = picked.map(([k, v]) => ({
     key: k,
@@ -62,7 +59,8 @@ async function runTest(cfg) {
     tenMonHoc: v.tenMonHoc,
     tenDot: v.tenDot,
     maMonHoc: v.maMonHoc,
-    isRenLuyen: !!v.isRenLuyen || k.startsWith('renluyen:'),
+    endpoint: v.endpoint,
+    entity: v,
     changes: Object.keys(v.cells)
       .filter((ck) => v.cells[ck] !== '')
       .map((ck) => ({ cellKey: ck, label: labelFromKey(ck), old: '', new: v.cells[ck] })),

@@ -37,7 +37,7 @@ test('nhiều cột mới cùng lúc → gộp 1 entry nhiều changes', () => {
   assert.equal(out[0].changes.length, 5);
 });
 
-test('Điểm tổng kết rỗng → có → isFinalized + finalCluster', () => {
+test('Điểm tổng kết rỗng → có → gán renderer grades cùng entity hiện tại', () => {
   const cells = {
     '␟Điểm tổng kết␟Điểm tổng kết': '9.30',
     '␟␟Điểm chữ': 'A+',
@@ -48,11 +48,8 @@ test('Điểm tổng kết rỗng → có → isFinalized + finalCluster', () =>
   };
   const out = diff({ 1: sub({ 'TX␟a␟1': '9.5' }) }, { 1: sub(cells) });
   assert.equal(out.length, 1);
-  assert.equal(out[0].isFinalized, true);
-  const labels = out[0].finalCluster.map((c) => c.label);
-  assert.ok(labels.includes('Điểm tổng kết'));
-  assert.ok(labels.includes('Điểm chữ'));
-  assert.ok(labels.includes('Xếp loại'));
+  assert.equal(out[0].endpoint, 'grades');
+  assert.equal(out[0].entity.cells['␟␟Điểm chữ'], 'A+');
 });
 
 test('rèn luyện: trạng thái đổi Chưa duyệt → Đã duyệt → báo, isRenLuyen', () => {

@@ -6,14 +6,14 @@ Theo dõi ba loại dữ liệu:
 
 - Điểm thành phần, điểm tổng kết, điểm chữ và xếp loại của từng lớp học phần.
 - Điểm rèn luyện.
-- Phiếu thu học phí mới, kèm liên kết hóa đơn PDF nếu OneUni trả về.
+- Hóa đơn hoặc phiếu thu học phí đã phát sinh, kèm liên kết PDF nếu OneUni trả về. Đây không phải dữ liệu học phí cần đóng.
 
 Lần chạy bình thường đầu tiên chỉ tạo mốc so sánh; sẽ không gửi toàn bộ điểm cũ lên Discord. Các lần sau, app chỉ thông báo giá trị mới hoặc bị thay đổi; ô bị xoá/rỗng được bỏ qua để tránh báo sai.
 
 ## Cách hoạt động
 
 ```text
-GitHub Actions → đăng nhập OneUni → lấy dữ liệu điểm/phiếu thu
+GitHub Actions → đăng nhập OneUni → lấy dữ liệu điểm/hóa đơn đã phát sinh
                → so với state đã mã hoá → Discord webhook
                → cập nhật state đã mã hoá vào repository
 ```
@@ -59,7 +59,7 @@ Giữ nguyên khoá này sau khi app đã chạy. Đổi khoá làm state cũ kh
 
 Vào tab `Actions`, bật workflows nếu GitHub yêu cầu. Chọn workflow **check-grades** → `Run workflow` → chọn `test` → `Run workflow`.
 
-Chế độ `test` thực hiện đăng nhập và tải dữ liệu thật, sau đó gửi vài môn thuộc kỳ gần nhất (và vài phiếu thu nếu có) với tiền tố `🧪`. Chế độ này không đọc hay ghi state, nên không tạo thông báo “điểm mới” giả.
+Chế độ `test` thực hiện đăng nhập và tải dữ liệu thật, sau đó gửi vài môn thuộc kỳ gần nhất, điểm rèn luyện và vài hóa đơn đã phát sinh nếu có, với tiền tố `🧪`. Chế độ này không đọc hay ghi state, nên không tạo thông báo “điểm mới” giả.
 
 Sau khi test thành công, workflow tự chạy hằng ngày. Có thể chạy thủ công ở chế độ `normal` bất kỳ lúc nào.
 
@@ -70,7 +70,7 @@ Sau khi test thành công, workflow tự chạy hằng ngày. Có thể chạy t
 | Điểm thành phần mới/sửa | Embed xanh `📊`, hiển thị điểm cũ → điểm mới khi có sửa. |
 | Môn vừa có điểm tổng kết | Embed vàng `✅`, gom điểm tổng kết, thang 4, điểm chữ, xếp loại và đạt/không đạt. |
 | Điểm rèn luyện thay đổi | Embed tím `📋`. |
-| Phiếu thu mới | Embed cam `💸`, định dạng tiền VND và liên kết PDF hóa đơn. |
+| Hóa đơn/phiếu thu đã phát sinh | Embed cam `💸`, định dạng tiền VND và liên kết PDF hóa đơn; không phải thông báo khoản cần đóng. |
 
 Discord giới hạn tối đa 10 embeds mỗi tin nhắn; app tự chia thành nhiều tin khi cần.
 
@@ -103,7 +103,7 @@ Các biến cấu hình nâng cao (thường không cần đặt):
 | `URL_UNI` | `https://sv.iuh.edu.vn/AppSVGV/` | API trường. |
 | `CLIENT_ID` | `mobile_flutter` | OAuth client ID. |
 | `SCOPE` | `offline_access openid` | OAuth scope. |
-| `TEST_SUBJECT_COUNT` | `3` | Số môn và số phiếu thu tối đa gửi trong test mode. |
+| `TEST_SUBJECT_COUNT` | `3` | Số entity tối đa mỗi endpoint gửi trong test mode. |
 | `NOTIFY_ON_FIRST_RUN` | Không bật | Đặt `1` để gửi tin xác nhận sau khi baseline được tạo. |
 
 ## Xử lý sự cố
@@ -122,7 +122,7 @@ Mở lần chạy lỗi tại `Actions` → **check-grades** → bước **Run g
 
 - Không commit `.env`, secrets hoặc URL webhook. `.gitignore` đã loại trừ các file local thông dụng.
 - Workflow commit ciphertext vào fork của bạn. Không thể đọc điểm từ `state/grades.enc` nếu không có `STATE_ENCRYPTION_KEY`.
-- Khi API trả về 401, app đăng nhập lại và thử lại request một lần. Nếu một môn, điểm rèn luyện hoặc phiếu thu lỗi riêng lẻ, phần đó bị bỏ qua để các dữ liệu khác vẫn được lưu.
+- Khi API trả về 401, app đăng nhập lại và thử lại request một lần. Nếu một môn hoặc một endpoint lỗi, phần đó bị bỏ qua để các dữ liệu khác vẫn được lưu.
 - `src/index.js` hiện tắt xác thực chứng chỉ TLS cho toàn bộ process để tương thích endpoint IUH đang thiếu intermediate CA. Điều này làm giảm an toàn khi chạy trên mạng không tin cậy; chỉ nên chạy workflow trong môi trường GitHub Actions hoặc khi bạn hiểu rủi ro.
 
 ## Phát triển
@@ -133,6 +133,17 @@ npm start
 ```
 
 Test suite dùng mock cho OneUni và Discord, bao phủ đăng nhập, API retry, snapshot, diff, định dạng Discord, mã hoá state và các kịch bản tích hợp. `npm start` tương đương `node src/index.js` và cần các biến môi trường tương ứng với chế độ chạy.
+
+### Thêm endpoint thông báo
+
+Các nguồn dữ liệu được tách thành module trong `src/endpoints/`; `src/endpoints/index.js` là registry quyết định nguồn nào được chạy. Để thêm nguồn mới:
+
+1. Sao chép `src/endpoints/template.js`, đặt một `id` cố định và một entity key ổn định qua các lần chạy.
+2. Viết `collect` để gọi endpoint qua `request`, rồi trả các entity có `cells` là dữ liệu cần theo dõi.
+3. Viết `render` cho embed Discord và `selectForTest` cho `TEST_MODE`.
+4. Thêm module vào registry và test các thay đổi/renderer của nó.
+
+Endpoint `tuition-receipts` chỉ đọc `PhieuThuTongHop`, vì vậy nó thông báo **hóa đơn hoặc phiếu thu đã phát sinh** (thường là sau khi thanh toán), không phải khoản học phí cần đóng. Nếu OneUni có API học phí đến hạn trong tương lai, hãy thêm một endpoint riêng theo template thay vì tái sử dụng endpoint này.
 
 ## License
 

@@ -80,7 +80,7 @@ test('Điểm tổng kết rỗng → có → embed nổi bật vàng kèm Đi�
   assert.ok(labels.includes('Xếp loại'));
 });
 
-test('phiếu thu mới: id mới xuất hiện → embed 💸 cam, format tiền VND + link hóa đơn', async () => {
+test('hóa đơn đã phát sinh: id mới → embed 💸 cam, format tiền VND + link hóa đơn', async () => {
   const phieu = [{
     id: 9001, soPhieu: 'PT001', idLoaiThu: 3, maHoaDon: 'HD123', ngayThu: '2026-07-01',
     tongTien: 32200000, donViThu: 'Phòng KHTC', urlInvoice: 'https://sv.iuh.edu.vn/inv/9001.pdf',
@@ -88,10 +88,10 @@ test('phiếu thu mới: id mới xuất hiện → embed 💸 cam, format tiề
   const after = (await buildSnapshot({}, makeDeps([{ level3: 'Điểm chữ', value: 'A' }], [], phieu))).snapshot;
   assert.ok(after['phieuthu:9001']);
   const changed = diff({}, after); // old rỗng → phiếu mới
-  const e = buildEmbeds(changed).find((x) => x.title.includes('Phiếu thu'));
+  const e = buildEmbeds(changed).find((x) => x.title.includes('đã phát sinh'));
   assert.ok(e);
   assert.equal(e.color, 15105570);
-  assert.match(e.title, /💸 Phiếu thu học phí mới/);
+  assert.match(e.title, /💸 Hóa đơn\/phiếu thu học phí đã phát sinh/);
   const money = e.fields.find((f) => f.name === 'Số tiền');
   assert.match(money.value, /32\.200\.000 ₫/);
   assert.match(e.description, /Xem PDF/);

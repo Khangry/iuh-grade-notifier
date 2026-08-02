@@ -1,9 +1,6 @@
-// Gửi 1 tin gom mọi thay đổi trong 1 run. Mỗi môn 1 embed.
-const GREEN = 3066993;
-const GOLD = 15844367;
-const PURPLE = 10181046;
-const ORANGE = 15105570; // phiếu thu học phí
-const VND = new Intl.NumberFormat('vi-VN');
+// Gửi 1 tin gom mọi thay đổi trong 1 run. Renderer thuộc về từng endpoint.
+import { endpointById, endpointIdForEntity } from './endpoints/index.js';
+import { labelFromKey } from './snapshot-utils.js';
 const MAX_FIELDS = 25;
 const MAX_EMBEDS = 10;
 
@@ -23,38 +20,13 @@ function makeEmbed(title, description, color, fields) {
 }
 
 export function buildEmbeds(subjects, opts = {}) {
-  const prefix = opts.testMode ? '🧪 ' : '';
-  const embeds = [];
-  for (const s of subjects) {
-    const isPhieuThu = s.isPhieuThu || (s.key && s.key.startsWith('phieuthu:'));
-    if (isPhieuThu) {
-      let desc = '';
-      const fields = [];
-      for (const c of s.changes) {
-        if (c.label === 'Hóa đơn') {
-          if (c.new) desc = `🧾 Hóa đơn: [Xem PDF](${c.new})`;
-          continue;
-        }
-        const val = c.label === 'Số tiền' ? `${VND.format(Number(c.new))} ₫` : String(c.new);
-        fields.push({ name: c.label, value: `**${val}**`, inline: true });
-      }
-      embeds.push(makeEmbed(`${prefix}💸 Phiếu thu học phí mới`, desc, ORANGE, fields));
-    } else if (s.isRenLuyen) {
-      const fields = s.changes.map((c) => ({ name: c.label, value: fieldValue(c), inline: true }));
-      embeds.push(makeEmbed(`${prefix}📋 Điểm rèn luyện — ${s.tenDot}`, '', PURPLE, fields));
-    } else if (s.isFinalized) {
-      const fields = (s.finalCluster || []).map((c) => ({
-        name: c.label,
-        value: /tổng kết/i.test(c.label) ? `**${c.new}**` : String(c.new),
-        inline: true,
-      }));
-      embeds.push(makeEmbed(`${prefix}✅ Điểm tổng kết — ${s.tenMonHoc}`, `${s.tenDot} • Mã LHP ${s.maMonHoc}`, GOLD, fields));
-    } else {
-      const fields = s.changes.map((c) => ({ name: c.label, value: fieldValue(c), inline: true }));
-      embeds.push(makeEmbed(`${prefix}📊 ${s.tenMonHoc}`, `${s.tenDot} • Mã LHP ${s.maMonHoc}`, GREEN, fields));
-    }
-  }
-  return embeds;
+  const helpers = { makeEmbed, fieldValue, labelFromKey };
+  return subjects.map((subject) => {
+    const id = subject.endpoint || endpointIdForEntity(subject.key || '', subject.entity || subject);
+    const endpoint = endpointById.get(id);
+    if (!endpoint) throw new Error(`Không có renderer cho endpoint: ${id}`);
+    return endpoint.render(subject, helpers, opts);
+  });
 }
 
 // Discord tối đa 10 embed/tin → chia nhiều POST. content chỉ gắn tin đầu.

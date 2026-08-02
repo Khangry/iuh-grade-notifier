@@ -1,5 +1,4 @@
-// Hai endpoint điểm + điểm rèn luyện. ctx = { token, cfg, relogin? }.
-// Bắt 401 → relogin 1 lần. Envelope { result, errorMessages, isOk }.
+// HTTP client OneUni dùng chung. Endpoint tự giữ path và request body của mình.
 import { login } from './auth.js';
 
 export async function apiPost(ctx, path, body, fetchImpl = fetch) {
@@ -35,30 +34,3 @@ export async function apiPost(ctx, path, body, fetchImpl = fetch) {
 export function makeCtx(cfg, token, fetchImpl = fetch) {
   return { token, cfg, relogin: async () => (await login(cfg, fetchImpl)).access_token };
 }
-
-export const ketQuaHocTap = (ctx, idSV, f) =>
-  apiPost(ctx, 'api/v1/SinhVien/KetQuaHocTap', { idSinhVien: idSV }, f);
-
-export const ketQuaHocTapChiTiet = (ctx, idSV, idLHP, f) =>
-  apiPost(ctx, 'api/v1/SinhVien/KetQuaHocTapChiTiet', { idSinhVien: idSV, idLopHocPhan: idLHP }, f);
-
-// Shape chính xác chưa xác nhận → thử nhiều body nếu 400. // TODO xác nhận khi chạy thật.
-export async function danhGiaRenLuyen(ctx, idSV, f = fetch) {
-  const bodies = [{ idSinhVien: idSV }, {}, { idSinhVien: idSV, maSinhVien: idSV }];
-  let lastErr;
-  for (const b of bodies) {
-    try {
-      return await apiPost(ctx, 'api/v1/SinhVien/DanhGiaRenLuyen', b, f);
-    } catch (e) {
-      lastErr = e;
-      if (!/HTTP 400/.test(e.message)) throw e; // chỉ fallback khi 400
-    }
-  }
-  throw lastErr;
-}
-
-// Phiếu thu học phí. LƯU Ý: field maSinhVien (= ma_map trong token), KHÔNG phải idSinhVien.
-export const phieuThuTongHop = (ctx, maSV, f) =>
-  apiPost(ctx, 'api/v1/SinhVien/PhieuThuTongHop', { maSinhVien: maSV }, f);
-
-export const realApi = { ketQuaHocTap, ketQuaHocTapChiTiet, danhGiaRenLuyen, phieuThuTongHop };
