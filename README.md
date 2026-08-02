@@ -1,156 +1,139 @@
-# 📊 Báo điểm IUH qua Discord
+# IUH Grade Notifier
 
-App tự động kiểm tra điểm trên **OneUni** (Đại học Công nghiệp TP.HCM) và **nhắn lên Discord** mỗi khi có điểm mới hoặc điểm bị sửa. Chạy tự động mỗi ngày, **miễn phí**, không cần bật máy tính.
+Tự động kiểm tra dữ liệu OneUni của IUH và gửi thông báo Discord khi có thay đổi. Ứng dụng được thiết kế để chạy miễn phí trên GitHub Actions mỗi ngày lúc **08:00 giờ Việt Nam** (GitHub có thể chạy trễ khi hệ thống quá tải).
 
-> Hướng dẫn này viết cho người **không biết gì về code**. Cứ làm từng bước, không cần cài gì lên máy, làm hết trên trình duyệt. Mất khoảng **15 phút**.
+Theo dõi ba loại dữ liệu:
 
----
+- Điểm thành phần, điểm tổng kết, điểm chữ và xếp loại của từng lớp học phần.
+- Điểm rèn luyện.
+- Phiếu thu học phí mới, kèm liên kết hóa đơn PDF nếu OneUni trả về.
 
-## Bạn cần chuẩn bị
+Lần chạy bình thường đầu tiên chỉ tạo mốc so sánh; sẽ không gửi toàn bộ điểm cũ lên Discord. Các lần sau, app chỉ thông báo giá trị mới hoặc bị thay đổi; ô bị xoá/rỗng được bỏ qua để tránh báo sai.
 
-1. **Tài khoản GitHub** (miễn phí) → tạo tại https://github.com/signup
-2. **1 server Discord** của riêng bạn (để nhận thông báo). Chưa có thì mở app Discord → bấm dấu **+** bên trái → *Tạo máy chủ của tôi*.
-3. **Tài khoản đăng nhập OneUni** (mã số sinh viên + mật khẩu bạn hay dùng để xem điểm).
+## Cách hoạt động
 
----
-
-## Bước 1 — Sao chép app về tài khoản của bạn (Fork)
-
-1. Mở trang app: **https://github.com/Khangry/iuh-grade-notifier**
-2. Góc trên bên phải, bấm nút **Fork**.
-3. Ở trang hiện ra, bấm **Create fork**.
-
-Xong. Giờ bạn có bản sao app trong tài khoản GitHub của mình. Mọi bước sau làm trên **bản sao của bạn**.
-
----
-
-## Bước 2 — Lấy đường link Discord (Webhook)
-
-Đây là "địa chỉ" để app gửi tin nhắn vào Discord của bạn.
-
-1. Mở Discord, vào server của bạn.
-2. Chọn 1 kênh (channel) muốn nhận điểm, bấm ⚙️ **Chỉnh sửa kênh** (biểu tượng bánh răng cạnh tên kênh).
-3. Chọn **Tích hợp (Integrations)** → **Webhook** → **Tạo Webhook (New Webhook)**.
-4. Bấm **Sao chép URL Webhook (Copy Webhook URL)**.
-5. Dán tạm URL này vào Ghi chú / Notepad. Lát nữa dùng. (Dạng: `https://discord.com/api/webhooks/...`)
-
----
-
-## Bước 3 — Chuẩn bị 5 thông tin để điền
-
-Mở Notepad, chuẩn bị sẵn 5 dòng sau (lát copy dán vào GitHub):
-
-| Tên | Giá trị điền vào | Lấy ở đâu |
-|---|---|---|
-| `ONEUNI_USERNAME` | `<MSSV>` + `IUH`, ví dụ `<MSSV>IUH` | Mã số sinh viên của bạn, viết liền chữ `IUH` phía sau |
-| `ONEUNI_PASSWORD` | mật khẩu OneUni của bạn | Mật khẩu bạn đăng nhập xem điểm |
-| `ONEUNI_CLIENT_SECRET` | `LcC4X5PeQ<MiQ;L` | Điền y hệt (dùng chung cho mọi SV IUH) |
-| `DISCORD_WEBHOOK_URL` | link ở **Bước 2** | Đã copy ở trên |
-| `STATE_ENCRYPTION_KEY` | 1 chuỗi ngẫu nhiên (xem Bước 4) | Tự tạo ở Bước 4 |
-
-> ⚠️ 5 thông tin này là **bí mật**. Không đưa cho ai, không đăng lên đâu. GitHub sẽ giữ kín (mã hoá) cho bạn.
-
----
-
-## Bước 4 — Tạo "chìa khoá mã hoá" (STATE_ENCRYPTION_KEY)
-
-App lưu điểm cũ để so sánh, và **mã hoá** trước khi lưu (vì bản sao repo để công khai). Bạn cần 1 chuỗi khoá ngẫu nhiên.
-
-**Cách dễ nhất (Windows, không cài gì):**
-1. Bấm nút **Start**, gõ `PowerShell`, mở **Windows PowerShell**.
-2. Dán dòng này vào rồi Enter:
-   ```powershell
-   [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-   ```
-3. Nó in ra 1 chuỗi kiểu `k9Zx...=`. **Copy toàn bộ chuỗi đó** — đây là `STATE_ENCRYPTION_KEY`.
-
-> Không dùng được PowerShell? Vào https://generate.plus/en/base64 → chọn 32 bytes → Generate → copy kết quả.
-
----
-
-## Bước 5 — Điền 5 thông tin vào GitHub
-
-1. Vào bản sao repo của bạn (tài khoản của bạn → repo `iuh-grade-notifier`).
-2. Bấm tab **Settings** (⚙️, trên cùng).
-3. Menu trái: **Secrets and variables** → **Actions**.
-4. Bấm nút xanh **New repository secret**.
-5. Với **từng** dòng trong bảng ở Bước 3:
-   - **Name**: gõ tên (vd `ONEUNI_USERNAME`) — gõ **chính xác**, viết hoa, có dấu gạch dưới.
-   - **Secret**: dán giá trị.
-   - Bấm **Add secret**.
-6. Lặp lại đủ **5 lần** cho 5 secret.
-
-Xong thì trang này phải hiện đủ 5 dòng:
-`ONEUNI_USERNAME`, `ONEUNI_PASSWORD`, `ONEUNI_CLIENT_SECRET`, `DISCORD_WEBHOOK_URL`, `STATE_ENCRYPTION_KEY`.
-
----
-
-## Bước 6 — Bật tính năng tự chạy (Actions)
-
-1. Trong repo, bấm tab **Actions** (trên cùng).
-2. Nếu thấy nút **"I understand my workflows, go ahead and enable them"** → bấm vào.
-
----
-
-## Bước 7 — Chạy thử để kiểm tra
-
-Kiểm tra app login được + gửi Discord được (chưa cần chờ điểm mới):
-
-1. Tab **Actions** → menu trái chọn **check-grades**.
-2. Bên phải bấm nút **Run workflow**.
-3. Ô **mode** chọn **test** → bấm nút xanh **Run workflow**.
-4. Chờ ~30 giây, refresh trang. Dòng chạy hiện **dấu ✓ xanh** = thành công.
-5. Mở Discord kiểm tra: phải có tin **🧪 [TEST] Kiểm tra pipeline** kèm vài môn điểm.
-
-- ✓ xanh + có tin Discord → **cài đặt xong!**
-- ✗ đỏ → xem mục **Gặp lỗi** bên dưới.
-
----
-
-## Xong! Từ giờ app tự làm gì?
-
-- **Mỗi ngày 8h sáng** (giờ VN) app tự kiểm tra điểm.
-- Có điểm **mới** hoặc điểm bị **sửa** → gửi ngay 1 tin lên Discord.
-  - Điểm thành phần (thường xuyên, giữa kỳ, thực hành...) → tin **xanh**.
-  - Môn vừa có **điểm tổng kết** → tin **vàng** nổi bật kèm điểm chữ, xếp loại.
-  - **Điểm rèn luyện** thay đổi → tin **tím**.
-- Không có gì mới → **im lặng**, không spam.
-- Lần chạy đầu chỉ ghi nhận điểm hiện có làm mốc, **không gửi** (tránh spam toàn bộ điểm cũ).
-
-Không cần làm gì thêm. Muốn bấm chạy tay lúc nào thì làm lại **Bước 7** (chọn mode **normal**).
-
----
-
-## Gặp lỗi? (Troubleshooting)
-
-Vào tab **Actions** → bấm vào lần chạy bị ✗ đỏ → bấm bước **Run grade checker** để xem dòng lỗi.
-
-| Dòng lỗi có chữ | Nguyên nhân | Cách sửa |
-|---|---|---|
-| `Đăng nhập thất bại` / `invalid_grant` | Sai username / password / client_secret | Kiểm tra lại 3 secret. Username phải có `IUH` ở cuối. Client secret điền y hệt `LcC4X5PeQ<MiQ;L` |
-| `STATE_ENCRYPTION_KEY phải là 32 byte` | Khoá mã hoá sai | Làm lại **Bước 4**, tạo khoá mới, cập nhật secret |
-| `Discord HTTP 401/404` | Link webhook sai hoặc đã bị xoá | Làm lại **Bước 2**, cập nhật `DISCORD_WEBHOOK_URL` |
-| `Thiếu config bắt buộc` | Thiếu 1 secret | Kiểm tra đủ 5 secret ở **Bước 5**, tên gõ đúng |
-
-Sửa secret: **Settings → Secrets and variables → Actions** → bấm tên secret → **Update**.
-
-> **Lưu ý:** GitHub tự tắt lịch chạy nếu repo 60 ngày không có hoạt động. App đã tự chống điều này (mỗi ngày ghi 1 mốc thời gian). Nếu lỡ bị tắt, GitHub gửi email — bạn chỉ cần vào tab **Actions** bấm **Enable**.
-
----
-
-## Dành cho người biết dùng terminal (tuỳ chọn)
-
-Không muốn điền secret bằng tay trên web? Cài [GitHub CLI](https://cli.github.com/), rồi trong thư mục repo:
-
-```bash
-bash setup-secrets.sh                                   # nhập 4 secret nhạy cảm
-openssl rand -base64 32 | gh secret set STATE_ENCRYPTION_KEY
-gh workflow run check-grades.yml -f mode=test           # chạy thử
+```text
+GitHub Actions → đăng nhập OneUni → lấy dữ liệu điểm/phiếu thu
+               → so với state đã mã hoá → Discord webhook
+               → cập nhật state đã mã hoá vào repository
 ```
 
-Chạy test ở máy: `TEST_MODE=1 node src/index.js` (cần Node.js 20+ và các biến môi trường tương ứng).
-Chạy bộ test: `node --test`.
+State được lưu tại `state/grades.enc`, mã hoá bằng AES-256-GCM. Mật khẩu OneUni, webhook và khoá mã hoá được lấy từ GitHub Secrets, không ghi vào source code hay log. `state/last_checked.txt` chỉ lưu thời điểm chạy để workflow có commit định kỳ.
 
-## App hoạt động thế nào (tóm tắt kỹ thuật)
+## Cài đặt trên GitHub
 
-Login OneUni (OAuth2) → đọc `KetQuaHocTap` + `KetQuaHocTapChiTiet` từng môn + `DanhGiaRenLuyen` → dựng "ảnh chụp" điểm → so với ảnh lần trước (giải mã từ `state/grades.enc`) → điểm mới/đổi thì gửi Discord → mã hoá lưu lại. Toàn bộ chạy trên GitHub Actions. Không lưu điểm/mật khẩu dạng đọc được, không in ra log công khai.
+### 1. Fork repository
+
+Fork repository này về tài khoản GitHub của bạn. Các thay đổi state sẽ được commit vào bản fork đó, vì vậy Actions cần quyền ghi nội dung repository.
+
+### 2. Tạo Discord webhook
+
+Trong Discord, chọn kênh muốn nhận thông báo:
+
+`Chỉnh sửa kênh` → `Tích hợp` → `Webhook` → `Tạo webhook` → `Sao chép URL webhook`.
+
+Không chia sẻ URL này; bất kỳ ai có URL đều có thể gửi tin nhắn vào kênh.
+
+### 3. Khai báo GitHub Secrets
+
+Vào repository fork → `Settings` → `Secrets and variables` → `Actions` → `New repository secret`, rồi thêm các secret sau.
+
+| Secret | Bắt buộc | Nội dung |
+| --- | :---: | --- |
+| `ONEUNI_USERNAME` | Có | Tên đăng nhập OneUni (thường là MSSV nối `IUH`, ví dụ `12345678IUH`). |
+| `ONEUNI_PASSWORD` | Có | Mật khẩu OneUni. |
+| `ONEUNI_CLIENT_SECRET` | Có | Client secret của OneUni dùng cho đăng nhập mobile. |
+| `DISCORD_WEBHOOK_URL` | Có | URL webhook Discord ở bước trước. |
+| `STATE_ENCRYPTION_KEY` | Có khi chạy normal | Khoá Base64 gồm đúng 32 byte để mã hoá state. |
+| `DISCORD_ALERT_WEBHOOK` | Không | Webhook riêng nhận cảnh báo khi app gặp lỗi. |
+
+Tạo `STATE_ENCRYPTION_KEY` trên PowerShell (Windows):
+
+```powershell
+[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+Giữ nguyên khoá này sau khi app đã chạy. Đổi khoá làm state cũ không thể giải mã; nếu cần đổi, hãy xoá `state/grades.enc` trong fork rồi để app tạo baseline mới.
+
+### 4. Bật và chạy thử workflow
+
+Vào tab `Actions`, bật workflows nếu GitHub yêu cầu. Chọn workflow **check-grades** → `Run workflow` → chọn `test` → `Run workflow`.
+
+Chế độ `test` thực hiện đăng nhập và tải dữ liệu thật, sau đó gửi vài môn thuộc kỳ gần nhất (và vài phiếu thu nếu có) với tiền tố `🧪`. Chế độ này không đọc hay ghi state, nên không tạo thông báo “điểm mới” giả.
+
+Sau khi test thành công, workflow tự chạy hằng ngày. Có thể chạy thủ công ở chế độ `normal` bất kỳ lúc nào.
+
+## Nội dung thông báo
+
+| Trường hợp | Hiển thị Discord |
+| --- | --- |
+| Điểm thành phần mới/sửa | Embed xanh `📊`, hiển thị điểm cũ → điểm mới khi có sửa. |
+| Môn vừa có điểm tổng kết | Embed vàng `✅`, gom điểm tổng kết, thang 4, điểm chữ, xếp loại và đạt/không đạt. |
+| Điểm rèn luyện thay đổi | Embed tím `📋`. |
+| Phiếu thu mới | Embed cam `💸`, định dạng tiền VND và liên kết PDF hóa đơn. |
+
+Discord giới hạn tối đa 10 embeds mỗi tin nhắn; app tự chia thành nhiều tin khi cần.
+
+## Chạy cục bộ
+
+Yêu cầu Node.js 20 trở lên. Repo không có dependency runtime nên không cần cài package để chạy; vẫn có thể dùng `npm test` để chạy test suite.
+
+```bash
+npm test
+```
+
+Khai báo các biến môi trường bắt buộc trước khi chạy. Chạy test pipeline là lựa chọn an toàn vì không sửa `state/`:
+
+```powershell
+$env:ONEUNI_USERNAME = '...'
+$env:ONEUNI_PASSWORD = '...'
+$env:ONEUNI_CLIENT_SECRET = '...'
+$env:DISCORD_WEBHOOK_URL = '...'
+$env:TEST_MODE = '1'
+node src/index.js
+```
+
+Để chạy chế độ bình thường, thêm `STATE_ENCRYPTION_KEY` và bỏ `TEST_MODE`. Chế độ này tạo/cập nhật `state/grades.enc` cùng `state/last_checked.txt` trong thư mục hiện hành.
+
+Các biến cấu hình nâng cao (thường không cần đặt):
+
+| Biến | Mặc định | Mục đích |
+| --- | --- | --- |
+| `AUTH_BASE` | `https://mobile.oneuni.com.vn` | Máy chủ xác thực OneUni. |
+| `URL_UNI` | `https://sv.iuh.edu.vn/AppSVGV/` | API trường. |
+| `CLIENT_ID` | `mobile_flutter` | OAuth client ID. |
+| `SCOPE` | `offline_access openid` | OAuth scope. |
+| `TEST_SUBJECT_COUNT` | `3` | Số môn và số phiếu thu tối đa gửi trong test mode. |
+| `NOTIFY_ON_FIRST_RUN` | Không bật | Đặt `1` để gửi tin xác nhận sau khi baseline được tạo. |
+
+## Xử lý sự cố
+
+| Lỗi | Cách kiểm tra |
+| --- | --- |
+| `Thiếu config bắt buộc` | Kiểm tra tên và giá trị các GitHub Secrets bắt buộc. |
+| `Đăng nhập thất bại` hoặc `invalid_grant` | Kiểm tra username, password và client secret OneUni. |
+| `STATE_ENCRYPTION_KEY phải là 32 byte` | Tạo lại khoá Base64 từ đúng 32 byte; không dùng một chuỗi văn bản bất kỳ. |
+| Không giải mã được state | Khoá hiện tại khác khoá đã dùng để ghi `state/grades.enc`; khôi phục khoá cũ hoặc xoá file state để baseline lại. |
+| `Discord HTTP 401` / `404` | Webhook không hợp lệ, bị xoá hoặc đã bị lộ; tạo webhook mới và cập nhật secret. |
+
+Mở lần chạy lỗi tại `Actions` → **check-grades** → bước **Run grade checker** để xem thông báo. Ứng dụng không chủ động in mật khẩu hoặc nội dung điểm vào log; nếu cấu hình `DISCORD_ALERT_WEBHOOK`, lỗi cũng được gửi tới webhook đó theo cơ chế best-effort.
+
+## Lưu ý bảo mật và vận hành
+
+- Không commit `.env`, secrets hoặc URL webhook. `.gitignore` đã loại trừ các file local thông dụng.
+- Workflow commit ciphertext vào fork của bạn. Không thể đọc điểm từ `state/grades.enc` nếu không có `STATE_ENCRYPTION_KEY`.
+- Khi API trả về 401, app đăng nhập lại và thử lại request một lần. Nếu một môn, điểm rèn luyện hoặc phiếu thu lỗi riêng lẻ, phần đó bị bỏ qua để các dữ liệu khác vẫn được lưu.
+- `src/index.js` hiện tắt xác thực chứng chỉ TLS cho toàn bộ process để tương thích endpoint IUH đang thiếu intermediate CA. Điều này làm giảm an toàn khi chạy trên mạng không tin cậy; chỉ nên chạy workflow trong môi trường GitHub Actions hoặc khi bạn hiểu rủi ro.
+
+## Phát triển
+
+```bash
+npm test
+npm start
+```
+
+Test suite dùng mock cho OneUni và Discord, bao phủ đăng nhập, API retry, snapshot, diff, định dạng Discord, mã hoá state và các kịch bản tích hợp. `npm start` tương đương `node src/index.js` và cần các biến môi trường tương ứng với chế độ chạy.
+
+## License
+
+Package metadata khai báo giấy phép MIT. Repository hiện chưa có tệp `LICENSE` riêng.
